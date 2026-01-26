@@ -19,9 +19,9 @@
       <Content Include="..\.dockerignore">
         <Link>.dockerignore</Link>
       </Content>
-        <AdditionalFiles Include="requirements.txt">
+        <Content Include="requirements.txt">
             <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-        </AdditionalFiles>
+        </Content>
     </ItemGroup>
 
     <ItemGroup>

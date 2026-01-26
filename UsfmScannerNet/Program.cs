@@ -27,7 +27,7 @@ class Program
             .WithHome(".")
             .WithVirtualEnvironment("python-env")
             .FromRedistributable()
-            .WithPipInstaller("Python/requirements.txt");
+            .WithPipInstaller();
         var app = builder.Build();
         app.Run();
     }
