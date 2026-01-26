@@ -13,13 +13,15 @@
         <SourceItemType>Python</SourceItemType>
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       </AdditionalFiles>
+        <Content Include="usfmtools/src/*">
+            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </Content>
       <Content Include="..\.dockerignore">
         <Link>.dockerignore</Link>
       </Content>
-        <None Remove="Python\requirements.txt" />
-        <Content Update="requirements.txt">
-          <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-        </Content>
+        <AdditionalFiles Include="requirements.txt">
+            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </AdditionalFiles>
     </ItemGroup>
 
     <ItemGroup>
