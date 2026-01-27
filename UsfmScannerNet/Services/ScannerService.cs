@@ -89,19 +89,20 @@ public class ScannerService: IHostedService
         var tempDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
         Directory.CreateDirectory(tempDir);
         await ZipFile.ExtractToDirectoryAsync(await zip.Content.ReadAsStreamAsync(cancellationToken), tempDir, cancellationToken);
+        var firstFolder = Directory.GetDirectories(tempDir).FirstOrDefault();
         try
         {
-            if (File.Exists(Path.Join(tempDir, "manifest.json")))
+            if (File.Exists(Path.Join(firstFolder, "manifest.json")))
             {
                 _logger.LogDebug("Found BTT Writer project, converting to USFM for scanning");
-                var bttWriterContainer = new FileSystemResourceContainer(tempDir);
+                var bttWriterContainer = new FileSystemResourceContainer(firstFolder);
                 var document = BTTWriterLoader.CreateUSFMDocumentFromContainer(bttWriterContainer, false);
                 var manifest = BTTWriterLoader.GetManifest(bttWriterContainer);
                 var renderer = new USFMRenderer();
                 var renderedFile = renderer.Render(document);
                 
                 // Determine the file name
-                await File.WriteAllTextAsync(DetermineFileNameForWriterProject(manifest), renderedFile, cancellationToken);
+                await File.WriteAllTextAsync(Path.Join(tempDir, DetermineFileNameForWriterProject(manifest)), renderedFile, cancellationToken);
             }
             var results = ScanRepoAsync(tempDir);
             var url = await UploadToStorageAsync(repo.User!, repo.Repo!, results, cancellationToken);
