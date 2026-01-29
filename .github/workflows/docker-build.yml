@@ -23,7 +23,7 @@ jobs:
       - name: Build image with buildx
         uses: docker/build-push-action@v3
         with:
-          dockerfile: UsfmScannerNet/Dockerfile
+          file: UsfmScannerNet/Dockerfile
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -66,7 +66,7 @@ jobs:
       - name: Build and conditional push API image
         uses: docker/build-push-action@v3
         with:
-          dockerfile: UsfmScannerNet/Dockerfile
+          file: UsfmScannerNet/Dockerfile
           push: true
           tags: |
             ${{ env.TAG_SHA }}
