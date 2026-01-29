@@ -52,7 +52,8 @@ public class ScannerService: IHostedService
 
     private Task ErrorHandler(ProcessErrorEventArgs arg)
     {
-        throw new NotImplementedException();
+        _logger.LogError(arg.Exception, "Error processing message: {ErrorSource}", arg.Exception.Message);
+        return Task.CompletedTask;
     }
 
     private async Task MessageHandler(ProcessMessageEventArgs arg)
@@ -71,7 +72,8 @@ public class ScannerService: IHostedService
         var downloadUrl = GetDownloadUrl(repo);
         if (downloadUrl == null)
         {
-            // TODO: Log error
+            _logger.LogError("Missing information to construct download URL for repo {User}/{Repo}", repo.User, repo.Repo);
+            return;
         }
 
         var zip = await _httpClient.GetAsync(downloadUrl, cancellationToken);
