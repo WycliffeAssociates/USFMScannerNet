@@ -1,0 +1,27 @@
+name: PR Build
+
+on:
+  pull_request:
+    branches:
+      - develop
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '10.0.x'
+
+    - name: Restore dependencies
+      run: dotnet restore UsfmScannerNet/UsfmScannerNet.csproj
+
+    - name: Build
+      run: dotnet build UsfmScannerNet/UsfmScannerNet.csproj --configuration Release --no-restore
