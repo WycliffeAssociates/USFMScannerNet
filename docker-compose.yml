@@ -1,0 +1,11 @@
+version: '3.8'
+
+services:
+  usfm-scanner-net:
+    image: wycliffeassociates/usfm-scanner-net:${DEPLOY_ENV}
+    environment:
+      - BlobServiceConnectionString
+      - ServiceBusConnectionString
+      - OutputPrefix
+      - ApplicationInsightsConnectionString
+    restart: unless-stopped
