@@ -1,4 +1,4 @@
-﻿using CSnakes.Runtime;
+using CSnakes.Runtime;
 using Microsoft.Extensions.Azure;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -23,11 +23,18 @@ class Program
         {
             config.DefaultRequestHeaders.Add("User-Agent", "UsfmScannerNet");
         });
-        builder.Services.WithPython()
+        var pythonHome = builder.Configuration.GetValue("PythonHome", ".");
+        var inContainer = builder.Configuration.GetValue<bool>("InContainer");
+
+        var pythonBuilder = builder.Services.WithPython()
             .WithHome(".")
-            .WithVirtualEnvironment("python-env")
             .FromRedistributable()
-            .WithPipInstaller();
+            .WithVirtualEnvironment(Path.Join(pythonHome, "python-env"));
+
+        if (!inContainer)
+        {
+            pythonBuilder.WithPipInstaller();
+        }
         var app = builder.Build();
         app.Run();
     }

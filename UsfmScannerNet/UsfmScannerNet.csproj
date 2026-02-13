@@ -26,7 +26,7 @@
 
     <ItemGroup>
       <PackageReference Include="Azure.Messaging.ServiceBus" Version="7.20.1" />
-      <PackageReference Include="Azure.Storage.Blobs" Version="12.27.0" />
+      <PackageReference Include="Azure.Storage.Blobs" Version="12.25.1" />
       <PackageReference Include="BTTWriterLib" Version="0.10.1" />
       <PackageReference Include="CSnakes.Runtime" Version="1.2.1" />
       <PackageReference Include="Microsoft.Extensions.Azure" Version="1.13.1" />
