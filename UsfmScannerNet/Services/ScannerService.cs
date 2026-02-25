@@ -173,10 +173,18 @@ public class ScannerService: IHostedService
         return output;
     }
 
+    private static readonly string[] JsonFilesToCheck = ["manifest.json", "metadata.json"];
+    private static readonly string[] YamlFilesToCheck = ["manifest.yaml", "manifest.yml"];
+
     private static void ScanJsonFiles(string path, string tempDir, Dictionary<string, Dictionary<string, List<LintingResultItem>>> results)
     {
-        foreach (var file in Directory.GetFiles(path, "*.json", SearchOption.AllDirectories))
+        foreach (var fileName in JsonFilesToCheck)
         {
+            var file = Path.Join(path, fileName);
+            if (!File.Exists(file))
+            {
+                continue;
+            }
             try
             {
                 var content = File.ReadAllText(file);
@@ -192,9 +200,13 @@ public class ScannerService: IHostedService
 
     private static void ScanYamlFiles(string path, string tempDir, Dictionary<string, Dictionary<string, List<LintingResultItem>>> results)
     {
-        foreach (var file in Directory.GetFiles(path, "*.yml", SearchOption.AllDirectories)
-            .Concat(Directory.GetFiles(path, "*.yaml", SearchOption.AllDirectories)))
+        foreach (var fileName in YamlFilesToCheck)
         {
+            var file = Path.Join(path, fileName);
+            if (!File.Exists(file))
+            {
+                continue;
+            }
             try
             {
                 var content = File.ReadAllText(file);
