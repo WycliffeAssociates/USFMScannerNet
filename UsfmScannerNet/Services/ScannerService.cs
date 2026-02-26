@@ -20,6 +20,9 @@ namespace UsfmScannerNet.Services;
 
 public class ScannerService: IHostedService
 {
+    private static readonly string[] JsonFilesToCheck = ["manifest.json", "metadata.json"];
+    private static readonly string[] YamlFilesToCheck = ["manifest.yaml", "manifest.yml"];
+    
     private readonly BlobServiceClient _blobServiceClient;
     private readonly ServiceBusClient _serviceBusClient;
     private const string TopicName = "WACSEvent";
@@ -116,13 +119,14 @@ public class ScannerService: IHostedService
 
             try
             {
-                var pythonResults = ScanRepoAsync(tempDir, tempDir);
-                foreach (var (book, bookContents) in pythonResults)
+                // Verify USFM files and add to results
+                var usfmResults = VerifyUsfmAsync(tempDir, tempDir);
+                foreach (var (book, bookContents) in usfmResults)
                 {
                     results.TryAdd(book, new Dictionary<string, List<LintingResultItem>>());
                     foreach (var (chapter, items) in bookContents)
                     {
-                        results[book].TryAdd(chapter, new List<LintingResultItem>());
+                        results[book].TryAdd(chapter, []);
                         results[book][chapter].AddRange(items);
                     }
                 }
@@ -147,7 +151,7 @@ public class ScannerService: IHostedService
         return $"{manifest.project.id}.usfm";
     }
     
-    private Dictionary<string, Dictionary<string,List<LintingResultItem>>> ScanRepoAsync(string path, string tempDir)
+    private Dictionary<string, Dictionary<string,List<LintingResultItem>>> VerifyUsfmAsync(string path, string tempDir)
     {
         var output = new Dictionary<string, Dictionary<string, List<LintingResultItem>>>();
         // Scan using python scanner
@@ -158,7 +162,7 @@ public class ScannerService: IHostedService
             output.TryAdd(book, new Dictionary<string, List<LintingResultItem>>());
             foreach (var (chapter, items) in bookContents)
             {
-                output[book].TryAdd(chapter, new List<LintingResultItem>());
+                output[book].TryAdd(chapter, []);
                 foreach (var item in items)
                 {
                     output[book][chapter].Add(new LintingResultItem
@@ -173,8 +177,6 @@ public class ScannerService: IHostedService
         return output;
     }
 
-    private static readonly string[] JsonFilesToCheck = ["manifest.json", "metadata.json"];
-    private static readonly string[] YamlFilesToCheck = ["manifest.yaml", "manifest.yml"];
 
     private static void ScanJsonFiles(string path, string tempDir, Dictionary<string, Dictionary<string, List<LintingResultItem>>> results)
     {
@@ -224,7 +226,7 @@ public class ScannerService: IHostedService
     private static void AddResult(Dictionary<string, Dictionary<string, List<LintingResultItem>>> results, string book, string chapter, string verse, string message, string errorId)
     {
         results.TryAdd(book, new Dictionary<string, List<LintingResultItem>>());
-        results[book].TryAdd(chapter, new List<LintingResultItem>());
+        results[book].TryAdd(chapter, []);
         results[book][chapter].Add(new LintingResultItem { Verse = verse, Message = message, ErrorId = errorId });
     }
 
