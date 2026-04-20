@@ -13,11 +13,16 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using UsfmScannerNet.Models;
 using USFMToolsSharp.Renderers.USFM;
+using YamlDotNet.Core;
+using YamlDotNet.RepresentationModel;
 
 namespace UsfmScannerNet.Services;
 
 public class ScannerService: IHostedService
 {
+    private static readonly string[] JsonFilesToCheck = ["manifest.json", "metadata.json"];
+    private static readonly string[] YamlFilesToCheck = ["manifest.yaml", "manifest.yml"];
+    
     private readonly BlobServiceClient _blobServiceClient;
     private readonly ServiceBusClient _serviceBusClient;
     private const string TopicName = "WACSEvent";
@@ -106,7 +111,31 @@ public class ScannerService: IHostedService
                 // Determine the file name
                 await File.WriteAllTextAsync(Path.Join(tempDir, DetermineFileNameForWriterProject(manifest)), renderedFile, cancellationToken);
             }
-            var results = ScanRepoAsync(tempDir);
+
+            var scanFolder = firstFolder ?? tempDir;
+            var results = new Dictionary<string, Dictionary<string, List<LintingResultItem>>>();
+            ScanJsonFiles(scanFolder, tempDir, results);
+            ScanYamlFiles(scanFolder, tempDir, results);
+
+            try
+            {
+                // Verify USFM files and add to results
+                var usfmResults = VerifyUsfmAsync(tempDir, tempDir);
+                foreach (var (book, bookContents) in usfmResults)
+                {
+                    results.TryAdd(book, new Dictionary<string, List<LintingResultItem>>());
+                    foreach (var (chapter, items) in bookContents)
+                    {
+                        results[book].TryAdd(chapter, []);
+                        results[book][chapter].AddRange(items);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error running USFM scanner on {User}/{Repo}", repo.User, repo.Repo);
+            }
+
             var url = await UploadToStorageAsync(repo.User!, repo.Repo!, results, cancellationToken);
             await SendCompletedMessageAsync(repo, url, cancellationToken);
         }
@@ -122,7 +151,7 @@ public class ScannerService: IHostedService
         return $"{manifest.project.id}.usfm";
     }
     
-    private Dictionary<string, Dictionary<string,List<LintingResultItem>>> ScanRepoAsync(string path)
+    private Dictionary<string, Dictionary<string,List<LintingResultItem>>> VerifyUsfmAsync(string path, string tempDir)
     {
         var output = new Dictionary<string, Dictionary<string, List<LintingResultItem>>>();
         // Scan using python scanner
@@ -133,13 +162,13 @@ public class ScannerService: IHostedService
             output.TryAdd(book, new Dictionary<string, List<LintingResultItem>>());
             foreach (var (chapter, items) in bookContents)
             {
-                output[book].TryAdd(chapter, new List<LintingResultItem>());
+                output[book].TryAdd(chapter, []);
                 foreach (var item in items)
                 {
                     output[book][chapter].Add(new LintingResultItem
                     {
                         Verse = item["verse"],
-                        Message = item["message"],
+                        Message = item["message"].Replace(tempDir, "").TrimStart(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar),
                         ErrorId = item["errorId"],
                     });
                 }
@@ -147,7 +176,59 @@ public class ScannerService: IHostedService
         }
         return output;
     }
-    
+
+
+    private static void ScanJsonFiles(string path, string tempDir, Dictionary<string, Dictionary<string, List<LintingResultItem>>> results)
+    {
+        foreach (var fileName in JsonFilesToCheck)
+        {
+            var file = Path.Join(path, fileName);
+            if (!File.Exists(file))
+            {
+                continue;
+            }
+            try
+            {
+                var content = File.ReadAllText(file);
+                JsonDocument.Parse(content);
+            }
+            catch (JsonException ex)
+            {
+                var relativePath = file.Replace(tempDir, "").TrimStart(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+                AddResult(results, "Unknown", relativePath, "Unknown", $"Invalid JSON: {ex.Message}", "MD01");
+            }
+        }
+    }
+
+    private static void ScanYamlFiles(string path, string tempDir, Dictionary<string, Dictionary<string, List<LintingResultItem>>> results)
+    {
+        foreach (var fileName in YamlFilesToCheck)
+        {
+            var file = Path.Join(path, fileName);
+            if (!File.Exists(file))
+            {
+                continue;
+            }
+            try
+            {
+                var content = File.ReadAllText(file);
+                var yaml = new YamlStream();
+                yaml.Load(new StringReader(content));
+            }
+            catch (YamlException ex)
+            {
+                var relativePath = file.Replace(tempDir, "").TrimStart(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+                AddResult(results, "Unknown", relativePath, "Unknown", $"Invalid YAML: {ex.Message}", "MD02");
+            }
+        }
+    }
+
+    private static void AddResult(Dictionary<string, Dictionary<string, List<LintingResultItem>>> results, string book, string chapter, string verse, string message, string errorId)
+    {
+        results.TryAdd(book, new Dictionary<string, List<LintingResultItem>>());
+        results[book].TryAdd(chapter, []);
+        results[book][chapter].Add(new LintingResultItem { Verse = verse, Message = message, ErrorId = errorId });
+    }
 
     public async Task StopAsync(CancellationToken cancellationToken)
     {
