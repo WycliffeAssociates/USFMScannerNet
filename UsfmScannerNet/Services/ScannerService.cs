@@ -251,6 +251,7 @@ public class ScannerService: IHostedService
             Repo = repo.Repo,
             User = repo.User,
             RepoId = repo.RepoId,
+            LastCommitId = repo.LastCommitId,
             ResultsFileUrl = resultsUrl
         };
         var messageJson = JsonSerializer.Serialize(completedMessage);
@@ -279,5 +280,6 @@ internal class LintingResultsMessage
     public string? Repo { get; set; }
     public string? User { get; set; }
     public int RepoId { get; set; }
+    public string LastCommitId { get; set; }
     public string? ResultsFileUrl { get; set; }
 }

@@ -7,4 +7,5 @@ public class WACSMessage
     public string? User { get; set; }
     public string? Repo { get; set; }
     public int RepoId { get; set; }
+    public string? LastCommitId { get; set; }
 }
