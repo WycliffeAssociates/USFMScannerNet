@@ -8,4 +8,9 @@ public class WACSMessage
     public string? Repo { get; set; }
     public int RepoId { get; set; }
     public string? LastCommitId { get; set; }
+
+    /// <summary>
+    /// Repository size in kibibytes, as reported by Gitea in the webhook payload.
+    /// </summary>
+    public int RepoSizeInKB { get; set; }
 }

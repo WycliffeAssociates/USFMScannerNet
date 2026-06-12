@@ -8,4 +8,5 @@ services:
       - ServiceBusConnectionString
       - OutputPrefix
       - ApplicationInsightsConnectionString
+      - MaxRepoSizeInMB
     restart: unless-stopped
