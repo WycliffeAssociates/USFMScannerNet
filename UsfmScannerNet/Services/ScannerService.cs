@@ -34,7 +34,8 @@ public class ScannerService: IHostedService
     private readonly HttpClient _httpClient;
     private readonly IPythonEnvironment _pythonEnvironment;
     private string _outputPrefix;
-    
+    private readonly int _maxRepoSizeInMB;
+
     public ScannerService(IAzureClientFactory<BlobServiceClient> blobServiceClientFactory,
         IAzureClientFactory<ServiceBusClient> serviceBusClientFactory, ILogger<ScannerService> logger,
         IHttpClientFactory httpClientFactory, IPythonEnvironment pythonEnvironment, IConfiguration configuration)
@@ -45,6 +46,7 @@ public class ScannerService: IHostedService
         _httpClient = httpClientFactory.CreateClient();
         _pythonEnvironment = pythonEnvironment;
         _outputPrefix = configuration.GetValue<string>("OutputPrefix");
+        _maxRepoSizeInMB = configuration.GetValue("MaxRepoSizeInMB", 200);
     }
     public async Task StartAsync(CancellationToken cancellationToken)
     {
@@ -74,6 +76,14 @@ public class ScannerService: IHostedService
 
     private async Task ProcessRepoAsync(WACSMessage repo, CancellationToken cancellationToken)
     {
+        if (repo.RepoSizeInKB > _maxRepoSizeInMB * 1024)
+        {
+            _logger.LogWarning(
+                "Skipping repo {User}/{Repo}: size {RepoSizeInKB} KB exceeds configured limit of {MaxRepoSizeInMB} MB",
+                repo.User, repo.Repo, repo.RepoSizeInKB, _maxRepoSizeInMB);
+            return;
+        }
+
         var downloadUrl = GetDownloadUrl(repo);
         if (downloadUrl == null)
         {

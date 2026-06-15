@@ -48,6 +48,7 @@ The application requires the following configuration values:
 | `BlobServiceConnectionString` | Connection string for Azure Blob Storage where scan results are uploaded | `DefaultEndpointsProtocol=https;AccountName=myaccount;AccountKey=mykey;EndpointSuffix=core.windows.net` |
 | `ServiceBusConnectionString` | Connection string for Azure Service Bus used for message processing | `Endpoint=sb://mynamespace.servicebus.windows.net/;SharedAccessKeyName=mykey;SharedAccessKey=mysecret` |
 | `OutputPrefix` | Base URL prefix for generating result file URLs (e.g., blob storage public URL) | `https://myaccount.blob.core.windows.net/scan-results/` |
+| `MaxRepoSizeInMB` | Optional. Maximum repository size (in MB) to process. Repositories larger than this, as reported by the Gitea webhook payload, are skipped with a warning. Defaults to `200`. | `200` |
 
 ### Configuration Options in .NET
 
@@ -87,12 +88,13 @@ Configuration values can be set in the following ways (in order of precedence):
 
 ### Processing Flow
 1. Receives repository update message via Service Bus
-2. Downloads repository ZIP from the provided URL
-3. Extracts and processes the repository content
-4. Converts BTT Writer projects to USFM if detected
-5. Scans all USFM files using the Python verification tool
-6. Uploads structured linting results to Blob Storage
-7. Sends completion message with result URL via Service Bus
+2. Skips the repository if its reported size exceeds `MaxRepoSizeInMB`
+3. Downloads repository ZIP from the provided URL
+4. Extracts and processes the repository content
+5. Converts BTT Writer projects to USFM if detected
+6. Scans all USFM files using the Python verification tool
+7. Uploads structured linting results to Blob Storage
+8. Sends completion message with result URL via Service Bus
 
 ### Supported File Types
 - Standard USFM files (.usfm)
