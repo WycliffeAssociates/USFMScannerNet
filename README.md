@@ -33,9 +33,10 @@ dotnet run --project UsfmScannerNet/UsfmScannerNet.csproj
 ```
 
 ### Using Docker
-Build the Docker image:
+Build the Docker image. The Dockerfile lives in `UsfmScannerNet/` but copies paths relative to the
+repository root, so the build context must be the root:
 ```bash
-docker build -t usfmscannernet UsfmScannerNet/
+docker build -t usfmscannernet -f UsfmScannerNet/Dockerfile .
 ```
 
 Run the container with required environment variables:
@@ -165,6 +166,7 @@ Gitea answers `401` rather than falling back to anonymous access.
 - **ScannerService**: Main hosted service that processes Service Bus messages and orchestrates the scanning workflow
 - **USFM Verification**: Python-based tool (`usfmtools`) that checks USFM files for formatting errors and inconsistencies
 - **BTT Writer Support**: Automatically converts BTT Writer project files to USFM format for scanning
+- **Manifest Validation**: Parses the repository's JSON and YAML manifests to confirm they are well-formed, reporting `MD01` for invalid JSON and `MD02` for invalid YAML
 - **Azure Integration**: Uses Azure Service Bus for event-driven processing and Azure Blob Storage for result persistence
 
 ### Processing Flow
@@ -172,10 +174,24 @@ Gitea answers `401` rather than falling back to anonymous access.
 2. Downloads repository ZIP from the provided URL
 3. Extracts and processes the repository content
 4. Converts BTT Writer projects to USFM if detected
-5. Scans all USFM files using the Python verification tool
-6. Uploads structured linting results to Blob Storage
-7. Sends completion message with result URL via Service Bus
+5. Validates the repository's JSON and YAML manifests, recording an error for any that fail to parse
+6. Scans all USFM files using the Python verification tool
+7. Uploads structured linting results to Blob Storage
+8. Sends completion message with result URL via Service Bus
 
 ### Supported File Types
 - Standard USFM files (.usfm)
 - BTT Writer project directories (automatically converted to USFM)
+- Manifests at the repository root, checked for well-formedness only:
+  - `manifest.json` and `metadata.json` — a parse failure is reported as `MD01`
+  - `manifest.yaml` and `manifest.yml` — a parse failure is reported as `MD02`
+
+Manifest results are filed under the book `Unknown` and keyed by the manifest's path inside the
+extracted archive, for example `<repo-name>/manifest.json`.
+
+### Error Codes
+`ErrorCodes.csv` in the repository root maps every error ID the scanner can emit to a human-readable
+description, covering both the USFM codes from `usfmtools` and the `MD01`/`MD02` manifest codes.
+
+This service does not read the file at runtime — it is the source of truth for other applications
+that display or interpret scan results. Add a row here whenever a new error code is introduced.
