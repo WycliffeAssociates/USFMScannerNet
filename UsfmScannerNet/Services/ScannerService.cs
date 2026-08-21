@@ -42,7 +42,7 @@ public class ScannerService: IHostedService
         _blobServiceClient = blobServiceClientFactory.CreateClient("BlobClient");
         _serviceBusClient = serviceBusClientFactory.CreateClient("ServiceBusClient");
         _logger = logger;
-        _httpClient = httpClientFactory.CreateClient();
+        _httpClient = httpClientFactory.CreateClient("http");
         _pythonEnvironment = pythonEnvironment;
         _outputPrefix = configuration.GetValue<string>("OutputPrefix");
     }
@@ -80,7 +80,7 @@ public class ScannerService: IHostedService
             _logger.LogError("Missing information to construct download URL for repo {User}/{Repo}", repo.User, repo.Repo);
             return;
         }
-
+        
         var zip = await _httpClient.GetAsync(downloadUrl, cancellationToken);
         if (!zip.IsSuccessStatusCode)
         {

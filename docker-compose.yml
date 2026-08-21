@@ -8,4 +8,12 @@ services:
       - ServiceBusConnectionString
       - OutputPrefix
       - ApplicationInsightsConnectionString
+      - MaxRepoSizeInMB
+      # Basic auth credentials for repository downloads, keyed by host name. GiteaHost must match
+      # the host in the webhook's RepoHtmlUrl. Assembled here so the deploy host only needs
+      # shell-safe variable names -- "export Gitea__my.host__User=..." is not a valid identifier.
+      # Set all three together, or leave all three unset to download anonymously: a host entry with
+      # blank credentials sends empty Basic auth and Gitea answers 401 instead of falling back.
+      - Gitea__${GiteaHost}__User=${GiteaUser}
+      - Gitea__${GiteaHost}__Password=${GiteaPassword}
     restart: unless-stopped

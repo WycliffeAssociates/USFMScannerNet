@@ -19,10 +19,11 @@ class Program
             clientBuilder.AddServiceBusClient(configuration.GetValue<string>("ServiceBusConnectionString")).WithName("ServiceBusClient");
         });
         builder.Services.AddHostedService<ScannerService>();
+        builder.Services.AddTransient<AuthInjector>();
         builder.Services.AddHttpClient("http", config =>
         {
-            config.DefaultRequestHeaders.Add("User-Agent", "UsfmScannerNet");
-        });
+            config.DefaultRequestHeaders.Add("User-Agent", "ScriptureRenderingPipeline");
+        }).AddHttpMessageHandler<AuthInjector>();
         var pythonHome = builder.Configuration.GetValue("PythonHome", ".");
         var inContainer = builder.Configuration.GetValue<bool>("InContainer");
 
