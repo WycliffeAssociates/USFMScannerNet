@@ -21,7 +21,10 @@ jobs:
         dotnet-version: '10.0.x'
 
     - name: Restore dependencies
-      run: dotnet restore UsfmScannerNet/UsfmScannerNet.csproj
+      run: dotnet restore UsfmScannerNet.sln
 
     - name: Build
-      run: dotnet build UsfmScannerNet/UsfmScannerNet.csproj --configuration Release --no-restore
+      run: dotnet build UsfmScannerNet.sln --configuration Release --no-restore
+
+    - name: Test
+      run: dotnet test UsfmScannerNet.Tests/UsfmScannerNet.Tests.csproj --configuration Release --no-build

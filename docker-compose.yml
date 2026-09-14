@@ -9,4 +9,6 @@ services:
       - OutputPrefix
       - ApplicationInsightsConnectionString
       - MaxRepoSizeInMB
+      - Gitea__${GiteaHost}__User=${GiteaUser}
+      - Gitea__${GiteaHost}__Password=${GiteaPassword}
     restart: unless-stopped
