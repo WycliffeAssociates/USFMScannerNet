@@ -15,7 +15,7 @@ ARG BUILD_CONFIGURATION=Release
 # Publish the application
 RUN dotnet publish "./UsfmScannerNet.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
 # Install CSnakes.Stage tool to get the Python redistributable (which includes libcsnakes_python.so)
-RUN dotnet tool install --global CSnakes.Stage
+RUN dotnet tool install --global CSnakes.Stage --version 1.2.1 --allow-roll-forward
 ENV PATH="/root/.dotnet/tools:${PATH}"
 # Setup Python redistributable - this downloads Python + libcsnakes_python.so
 RUN setup-python --python 3.12 --venv /app/python-env --pip-requirements /src/UsfmScannerNet/requirements.txt --verbose
