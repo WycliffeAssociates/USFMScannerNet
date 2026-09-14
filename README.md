@@ -171,13 +171,14 @@ Gitea answers `401` rather than falling back to anonymous access.
 
 ### Processing Flow
 1. Receives repository update message via Service Bus
-2. Downloads repository ZIP from the provided URL
-3. Extracts and processes the repository content
-4. Converts BTT Writer projects to USFM if detected
-5. Validates the repository's JSON and YAML manifests, recording an error for any that fail to parse
-6. Scans all USFM files using the Python verification tool
-7. Uploads structured linting results to Blob Storage
-8. Sends completion message with result URL via Service Bus
+2. Skips the repository if its reported size exceeds 
+3. Downloads repository ZIP from the provided URL
+4. Extracts and processes the repository content
+5. Converts BTT Writer projects to USFM if detected
+6. Validates the repository's JSON and YAML manifests, recording an error for any that fail to parse
+7. Scans all USFM files using the Python verification tool
+8. Uploads structured linting results to Blob Storage
+9. Sends completion message with result URL via Service Bus
 
 ### Supported File Types
 - Standard USFM files (.usfm)
