@@ -23,8 +23,9 @@ dotnet build
 ```bash
 dotnet test
 ```
-`UsfmScannerNet.Tests` covers the `AuthInjector` credential handler: HTTPS gating, host matching, and
-the configuration shapes used in deployment.
+`UsfmScannerNet.Tests` covers the `AuthInjector` credential handler (HTTPS gating, host matching, and
+the configuration shapes used in deployment) and BTT Writer conversion, including legacy manifests
+that are reported as `MD03` instead of failing the scan.
 
 ### Running Locally
 Set the required configuration values (see Configuration section below) and run:
@@ -59,6 +60,7 @@ export BlobServiceConnectionString="your-connection-string"
 export ServiceBusConnectionString="your-servicebus-connection-string"
 export OutputPrefix="your-output-prefix"
 export MaxRepoSizeInMB="200"
+export ApplicationInsightsConnectionString="InstrumentationKey=...;IngestionEndpoint=..."
 export GiteaHost="git.example.org"
 export GiteaUser="usfm-scanner"
 export GiteaPassword="gitea-access-token"
@@ -78,6 +80,7 @@ The application requires the following configuration values:
 | `ServiceBusConnectionString` | Connection string for Azure Service Bus used for message processing | `Endpoint=sb://mynamespace.servicebus.windows.net/;SharedAccessKeyName=mykey;SharedAccessKey=mysecret` |
 | `OutputPrefix` | Base URL prefix for generating result file URLs (e.g., blob storage public URL) | `https://myaccount.blob.core.windows.net/scan-results/` |
 | `MaxRepoSizeInMB` | Optional. Maximum repository size (in MB) to process. Repositories larger than this, as reported by the Gitea webhook payload, are skipped with a warning. Defaults to `200`. | `200` |
+| `ApplicationInsightsConnectionString` | Optional. When set, logs, exceptions, and dependency calls are sent to Application Insights. Leave unset to log to the console only. | `InstrumentationKey=...;IngestionEndpoint=https://...` |
 | `Gitea:<host>:User` | Optional. Username for HTTP Basic auth when downloading repositories from `<host>`. Only needed for repositories that are not publicly readable. See [Gitea Credentials](#gitea-credentials). | `usfm-scanner` |
 | `Gitea:<host>:Password` | Optional. Password or access token paired with `Gitea:<host>:User`. | `gitea-access-token` |
 | `AllowInsecureAuth` | Optional. When `true`, credentials may be sent over plain `http://` as well as `https://`. Local development only. Defaults to `false`. | `false` |
@@ -165,16 +168,16 @@ Gitea answers `401` rather than falling back to anonymous access.
 ### Key Components
 - **ScannerService**: Main hosted service that processes Service Bus messages and orchestrates the scanning workflow
 - **USFM Verification**: Python-based tool (`usfmtools`) that checks USFM files for formatting errors and inconsistencies
-- **BTT Writer Support**: Automatically converts BTT Writer project files to USFM format for scanning
+- **BTT Writer Support**: Automatically converts BTT Writer project files to USFM format for scanning. If the project can't be loaded (for example a legacy tStudio manifest with a numeric `generator.build`, which BTTWriterLib can't deserialize), an `MD03` finding is recorded and the rest of the scan still runs
 - **Manifest Validation**: Parses the repository's JSON and YAML manifests to confirm they are well-formed, reporting `MD01` for invalid JSON and `MD02` for invalid YAML
 - **Azure Integration**: Uses Azure Service Bus for event-driven processing and Azure Blob Storage for result persistence
 
 ### Processing Flow
 1. Receives repository update message via Service Bus
-2. Skips the repository if its reported size exceeds 
+2. Skips the repository if its reported size exceeds `MaxRepoSizeInMB`
 3. Downloads repository ZIP from the provided URL
 4. Extracts and processes the repository content
-5. Converts BTT Writer projects to USFM if detected
+5. Converts BTT Writer projects to USFM if detected, recording an `MD03` error if the project can't be loaded
 6. Validates the repository's JSON and YAML manifests, recording an error for any that fail to parse
 7. Scans all USFM files using the Python verification tool
 8. Uploads structured linting results to Blob Storage
@@ -186,13 +189,14 @@ Gitea answers `401` rather than falling back to anonymous access.
 - Manifests at the repository root, checked for well-formedness only:
   - `manifest.json` and `metadata.json` — a parse failure is reported as `MD01`
   - `manifest.yaml` and `manifest.yml` — a parse failure is reported as `MD02`
+  - a BTT Writer `manifest.json` that parses but can't be loaded as a project is reported as `MD03`
 
 Manifest results are filed under the book `Unknown` and keyed by the manifest's path inside the
 extracted archive, for example `<repo-name>/manifest.json`.
 
 ### Error Codes
 `ErrorCodes.csv` in the repository root maps every error ID the scanner can emit to a human-readable
-description, covering both the USFM codes from `usfmtools` and the `MD01`/`MD02` manifest codes.
+description, covering both the USFM codes from `usfmtools` and the `MD01`/`MD02`/`MD03` manifest codes.
 
 This service does not read the file at runtime — it is the source of truth for other applications
 that display or interpret scan results. Add a row here whenever a new error code is introduced.

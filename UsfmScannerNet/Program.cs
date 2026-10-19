@@ -18,6 +18,14 @@ class Program
             clientBuilder.AddBlobServiceClient(configuration.GetValue<string>("BlobServiceConnectionString")).WithName("BlobClient");
             clientBuilder.AddServiceBusClient(configuration.GetValue<string>("ServiceBusConnectionString")).WithName("ServiceBusClient");
         });
+        var appInsightsConnectionString = configuration.GetValue<string>("ApplicationInsightsConnectionString");
+        if (!string.IsNullOrWhiteSpace(appInsightsConnectionString))
+        {
+            builder.Services.AddApplicationInsightsTelemetryWorkerService(options =>
+            {
+                options.ConnectionString = appInsightsConnectionString;
+            });
+        }
         builder.Services.AddHostedService<ScannerService>();
         builder.Services.AddTransient<AuthInjector>();
         builder.Services.AddHttpClient("http", config =>
