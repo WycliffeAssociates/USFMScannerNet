@@ -105,25 +105,19 @@ public class ScannerService: IHostedService
         
         var tempDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
         Directory.CreateDirectory(tempDir);
-        await ZipFile.ExtractToDirectoryAsync(await zip.Content.ReadAsStreamAsync(cancellationToken), tempDir, cancellationToken);
-        var firstFolder = Directory.GetDirectories(tempDir).FirstOrDefault();
         try
         {
-            if (File.Exists(Path.Join(firstFolder, "manifest.json")))
+            await ZipFile.ExtractToDirectoryAsync(await zip.Content.ReadAsStreamAsync(cancellationToken), tempDir, cancellationToken);
+            var firstFolder = Directory.GetDirectories(tempDir).FirstOrDefault();
+            var results = new Dictionary<string, Dictionary<string, List<LintingResultItem>>>();
+
+            if (firstFolder != null && File.Exists(Path.Join(firstFolder, "manifest.json")))
             {
                 _logger.LogDebug("Found BTT Writer project, converting to USFM for scanning");
-                var bttWriterContainer = new FileSystemResourceContainer(firstFolder);
-                var document = BTTWriterLoader.CreateUSFMDocumentFromContainer(bttWriterContainer, false);
-                var manifest = BTTWriterLoader.GetManifest(bttWriterContainer);
-                var renderer = new USFMRenderer();
-                var renderedFile = renderer.Render(document);
-                
-                // Determine the file name
-                await File.WriteAllTextAsync(Path.Join(tempDir, DetermineFileNameForWriterProject(manifest)), renderedFile, cancellationToken);
+                await ConvertBttWriterProjectAsync(firstFolder, tempDir, results, _logger, repo.User, repo.Repo, cancellationToken);
             }
 
             var scanFolder = firstFolder ?? tempDir;
-            var results = new Dictionary<string, Dictionary<string, List<LintingResultItem>>>();
             ScanJsonFiles(scanFolder, tempDir, results);
             ScanYamlFiles(scanFolder, tempDir, results);
 
@@ -152,6 +146,37 @@ public class ScannerService: IHostedService
         finally
         {
             Directory.Delete(tempDir, true);
+        }
+    }
+
+    /// <summary>
+    /// Converts a BTT Writer project to a USFM file in <paramref name="tempDir"/> so the USFM scanner picks it up.
+    /// If the project can't be loaded (for example a legacy tStudio manifest that BTTWriterLib can't deserialize),
+    /// an MD03 finding is recorded instead of throwing, so the rest of the scan still runs.
+    /// </summary>
+    /// <returns>True if the project was converted, false if an MD03 finding was recorded instead</returns>
+    internal static async Task<bool> ConvertBttWriterProjectAsync(string projectFolder, string tempDir,
+        Dictionary<string, Dictionary<string, List<LintingResultItem>>> results, ILogger logger, string? user,
+        string? repoName, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var bttWriterContainer = new FileSystemResourceContainer(projectFolder);
+            var document = BTTWriterLoader.CreateUSFMDocumentFromContainer(bttWriterContainer, false);
+            var manifest = BTTWriterLoader.GetManifest(bttWriterContainer);
+            var renderer = new USFMRenderer();
+            var renderedFile = renderer.Render(document);
+
+            await File.WriteAllTextAsync(Path.Join(tempDir, DetermineFileNameForWriterProject(manifest)), renderedFile, cancellationToken);
+            return true;
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            logger.LogWarning(ex, "Could not load BTT Writer project for {User}/{Repo}", user, repoName);
+            var manifestPath = Path.Join(projectFolder, "manifest.json");
+            var relativePath = manifestPath.Replace(tempDir, "").TrimStart(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            AddResult(results, "Unknown", relativePath, "Unknown", $"Could not load BTT Writer project: {ex.Message.Replace(tempDir, "")}", "MD03");
+            return false;
         }
     }
 

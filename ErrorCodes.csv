@@ -1,6 +1,7 @@
 Error,Description
 MD01,Invalid JSON
 MD02,Invalid YAML
+MD03,Could not load BTT Writer project
 0.1,Mixed case word in a single occurrence.
 0.2,Mixed case words occurring more than once each.
 0.3,Too many mixed case words; reporting canceled.
