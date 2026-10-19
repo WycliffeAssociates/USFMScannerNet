@@ -80,7 +80,7 @@ The application requires the following configuration values:
 | `ServiceBusConnectionString` | Connection string for Azure Service Bus used for message processing | `Endpoint=sb://mynamespace.servicebus.windows.net/;SharedAccessKeyName=mykey;SharedAccessKey=mysecret` |
 | `OutputPrefix` | Base URL prefix for generating result file URLs (e.g., blob storage public URL) | `https://myaccount.blob.core.windows.net/scan-results/` |
 | `MaxRepoSizeInMB` | Optional. Maximum repository size (in MB) to process. Repositories larger than this, as reported by the Gitea webhook payload, are skipped with a warning. Defaults to `200`. | `200` |
-| `ApplicationInsightsConnectionString` | Optional. When set, logs, exceptions, and dependency calls are sent to Application Insights. Leave unset to log to the console only. | `InstrumentationKey=...;IngestionEndpoint=https://...` |
+| `ApplicationInsightsConnectionString` | Optional. When set, logs (including exceptions), traces, and metrics are exported to Azure Monitor / Application Insights through OpenTelemetry. Leave unset to log to the console only. | `InstrumentationKey=...;IngestionEndpoint=https://...` |
 | `Gitea:<host>:User` | Optional. Username for HTTP Basic auth when downloading repositories from `<host>`. Only needed for repositories that are not publicly readable. See [Gitea Credentials](#gitea-credentials). | `usfm-scanner` |
 | `Gitea:<host>:Password` | Optional. Password or access token paired with `Gitea:<host>:User`. | `gitea-access-token` |
 | `AllowInsecureAuth` | Optional. When `true`, credentials may be sent over plain `http://` as well as `https://`. Local development only. Defaults to `false`. | `false` |

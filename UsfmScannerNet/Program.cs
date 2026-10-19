@@ -1,3 +1,4 @@
+using Azure.Monitor.OpenTelemetry.Exporter;
 using CSnakes.Runtime;
 using Microsoft.Extensions.Azure;
 using Microsoft.Extensions.Configuration;
@@ -21,7 +22,7 @@ class Program
         var appInsightsConnectionString = configuration.GetValue<string>("ApplicationInsightsConnectionString");
         if (!string.IsNullOrWhiteSpace(appInsightsConnectionString))
         {
-            builder.Services.AddApplicationInsightsTelemetryWorkerService(options =>
+            builder.Services.AddOpenTelemetry().UseAzureMonitorExporter(options =>
             {
                 options.ConnectionString = appInsightsConnectionString;
             });
